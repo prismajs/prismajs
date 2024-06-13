@@ -16,47 +16,27 @@ async function init() {
         type: 'list',
         name: 'frontend',
         message: 'Which front-end framework do you want to use?',
-        choices: ['React', 'Vue', 'Inertia.js with React', 'Inertia.js with Vue'],
+        choices: ['Inertia.js with React', 'Inertia.js with Vue'],
       },
     ])
     .then((answers) => {
       const { frontend } = answers;
-      let installCommand = '';
       let framework = '';
 
       switch (frontend) {
-        case 'React':
-          installCommand = 'npx create-react-app resources/js';
-          framework = 'react';
-          break;
-        case 'Vue':
-          installCommand = 'npm init vue@latest resources/js';
-          framework = 'vue';
-          break;
         case 'Inertia.js with React':
-          installCommand = 'npx create-react-app resources/js && cd resources/js && npm install @inertiajs/inertia @inertiajs/inertia-react';
           framework = 'react';
+          setupReact();
           break;
         case 'Inertia.js with Vue':
-          installCommand = 'npm init vue@latest resources/js && cd resources/js && npm install @inertiajs/inertia @inertiajs/inertia-vue';
           framework = 'vue';
+          setupVue();
           break;
         default:
           console.log('No front-end framework selected.');
       }
 
-      if (installCommand) {
-        exec(installCommand, (err, stdout, stderr) => {
-          if (err) {
-            console.error(`Error: ${err.message}`);
-            return;
-          }
-          console.log(stdout);
-          setupViteConfig(framework);
-        });
-      } else {
-        setupViteConfig(framework);
-      }
+      setupViteConfig(framework);
     });
 }
 
@@ -68,6 +48,92 @@ program
   .action(init);
 
 program.parse(process.argv);
+
+function setupReact() {
+  exec('npm install @inertiajs/inertia @inertiajs/inertia-react react react-dom', (err, stdout, stderr) => {
+    if (err) {
+      console.error(`Error: ${err.message}`);
+      return;
+    }
+    console.log(stdout);
+    setupReactFiles();
+  });
+}
+
+function setupVue() {
+  exec('npm install @inertiajs/inertia @inertiajs/inertia-vue vue', (err, stdout, stderr) => {
+    if (err) {
+      console.error(`Error: ${err.message}`);
+      return;
+    }
+    console.log(stdout);
+    setupVueFiles();
+  });
+}
+
+function setupReactFiles() {
+  fs.writeFileSync(path.join(process.cwd(), 'resources/js/app.jsx'), `
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { InertiaApp } from '@inertiajs/inertia-react';
+
+const el = document.getElementById('app');
+
+createRoot(el).render(
+  <InertiaApp
+    initialPage={JSON.parse(el.dataset.page)}
+    resolveComponent={(name) => import(\`./pages/\${name}\`).then(module => module.default)}
+  />
+);
+  `);
+
+  fs.writeFileSync(path.join(process.cwd(), 'resources/js/pages/HomePage.jsx'), `
+import React from 'react';
+import { InertiaLink } from '@inertiajs/inertia-react';
+
+const HomePage = ({ message }) => (
+  <div>
+    <h1>{message}</h1>
+    <InertiaLink href="/another-page">Go to another page</InertiaLink>
+  </div>
+);
+
+export default HomePage;
+  `);
+}
+
+function setupVueFiles() {
+  fs.writeFileSync(path.join(process.cwd(), 'resources/js/app.js'), `
+import { createApp, h } from 'vue';
+import { createInertiaApp } from '@inertiajs/inertia-vue3';
+
+createInertiaApp({
+  resolve: name => require(\`./pages/\${name}\`),
+  setup({ el, App, props, plugin }) {
+    createApp({ render: () => h(App, props) })
+      .use(plugin)
+      .mount(el);
+  },
+});
+  `);
+
+  fs.writeFileSync(path.join(process.cwd(), 'resources/js/pages/HomePage.vue'), `
+<template>
+  <div>
+    <h1>{{ message }}</h1>
+    <inertia-link href="/another-page">Go to another page</inertia-link>
+  </div>
+</template>
+
+<script>
+export default {
+  props: {
+    message: String,
+  },
+};
+</script>
+  `);
+}
 
 function setupViteConfig(framework) {
   const viteConfigContent = generateViteConfig(framework);
