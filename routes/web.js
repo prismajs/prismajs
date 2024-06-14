@@ -5,6 +5,7 @@ const exampleMiddleware = require('../app/Http/Middlewares/exampleMiddleware');
 
 // Define routes
 Route.get('/', HomeController, 'index', 'home.index');
+Route.get('/home', HomeController, 'home', 'home');
 
 Route.group((route) => {
   route.middleware(exampleMiddleware)

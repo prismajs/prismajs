@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <% if (process.env.NODE_ENV === 'development') { %>
+    <script src="http://localhost:8080/js/bundle.js" defer></script>
+  <% } else { %>
+    <script src="<%= webpack('bundle.js') %>" defer></script>
+  <% } %>
+</head>
+<body>
+  <div id="app" data-page='<%= page %>'><!-- app --></div>
+</body>
+</html>
